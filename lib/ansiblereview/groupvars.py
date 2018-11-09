@@ -44,7 +44,12 @@ def remove_inherited_and_overridden_group_vars(group, inventory):
 def same_variable_defined_in_competing_groups(candidate, options):
     result = Result(candidate.path)
     # assume that group_vars file is under an inventory *directory*
-    invfile = os.path.dirname(os.path.dirname(candidate.path))
+    sdirs = candidate.path.split(os.sep)
+    if sdirs.index('group_vars') == 0:
+        invfile = os.getcwd()
+    else:
+        invfile = os.path.join(*sdirs[:sdirs.index('group_vars')])
+    grpname = os.path.splitext(sdirs[sdirs.index('group_vars')+1])[0]
     global _inv
 
     try:
@@ -54,9 +59,9 @@ def same_variable_defined_in_competing_groups(candidate, options):
         return result
 
     if hasattr(inv, 'groups'):
-        group = inv.groups.get(os.path.basename(candidate.path))
+        group = inv.groups.get(grpname)
     else:
-        group = inv.get_group(os.path.basename(candidate.path))
+        group = inv.get_group(grpname)
     if not group:
         # group file exists in group_vars but no related group
         # in inventory directory
