@@ -4,6 +4,16 @@ from functools import partial
 import re
 import os
 from ansiblereview import utils
+try:
+    import ansible.parsing.dataloader
+    from ansible.vars.manager import VariableManager
+    ANSIBLE = 2
+except ImportError:
+    try:
+        from ansible.vars.manager import VariableManager
+        ANSIBLE = 2
+    except ImportError:
+        ANSIBLE = 1
 
 try:
     # Ansible 2.4 import of module loader
@@ -234,3 +244,21 @@ def find_version(filename, version_regex="^# Standards: ([0-9]+\.[0-9]+)"):
             if match:
                 return match.group(1)
     return None
+
+
+def parse_inventory(fname):
+    inv = {}
+
+    if ANSIBLE > 1:
+        loader = ansible.parsing.dataloader.DataLoader()
+        try:
+            from ansible.inventory.manager import InventoryManager
+            inv = InventoryManager(loader=loader, sources=fname)
+        except ImportError:
+            var_manager = VariableManager()
+            inv = ansible.inventory.Inventory(loader=loader,
+                                              variable_manager=var_manager,
+                                              host_list=fname)
+    else:
+        inv = ansible.inventory.Inventory(fname)
+    return inv
