@@ -1,7 +1,8 @@
 import codecs
+import os
 import yaml
 from yaml.composer import Composer
-from ansiblereview import Result, Error
+from ansiblereview import Result, Error, get_vault_password, get_decrypted_file
 
 
 def hunt_repeated_yaml_keys(data):
@@ -39,7 +40,11 @@ def hunt_repeated_yaml_keys(data):
 
 
 def repeated_vars(candidate, settings):
-    with codecs.open(candidate.path, 'r') as f:
+    vaultpass = get_vault_password(settings)
+    fname = get_decrypted_file(candidate.path, vaultpass)
+    with codecs.open(fname, 'r') as f:
         errors = hunt_repeated_yaml_keys(f) or dict()
+    if candidate.path not in fname:
+        os.unlink(fname)
     return Result(candidate, [Error(err_line, "Variable %s occurs more than once" % err_key)
                               for err_key in errors for err_line in errors[err_key]])
