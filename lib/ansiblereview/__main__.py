@@ -49,6 +49,7 @@ def main():
                       help="limit standards to specific names")
     parser.add_option('-v', dest='log_level', action="store_const", default=logging.WARN,
                       const=logging.INFO, help="Show more verbose output")
+    parser.add_option('-V', dest='vaultpass', help="vault password")
 
     options, args = parser.parse_args(sys.argv[1:])
     settings = read_config(options.configfile)

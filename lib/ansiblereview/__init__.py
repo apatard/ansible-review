@@ -262,3 +262,20 @@ def parse_inventory(fname):
     else:
         inv = ansible.inventory.Inventory(fname)
     return inv
+
+
+def get_vault_password(options):
+    # is there a better way of doing this ?
+    # doesnt handle multiple vault ids.
+    pwd = None
+    if hasattr(options, 'vaultpass') and options.vaultpass:
+        if os.path.isfile(options.vaultpass):
+            if os.access(options.vaultpass, os.X_OK):
+                pwd = subprocess.check_output([os.path.abspath(options.vaultpass)])
+            else:
+                with open(options.vaultpass) as f:
+                    pwd = f.read()
+            pwd = pwd.strip()
+        else:
+            pwd = options.vaultpass
+    return pwd
