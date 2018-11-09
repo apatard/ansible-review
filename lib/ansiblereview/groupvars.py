@@ -1,19 +1,7 @@
-import ansible.inventory
-from ansiblereview import Result, Error
+from ansiblereview import Result, Error, parse_inventory
 from ansible.errors import AnsibleError
 import inspect
 import os
-
-try:
-    import ansible.parsing.dataloader
-    from ansible.vars.manager import VariableManager
-    ANSIBLE = 2
-except ImportError:
-    try:
-        from ansible.vars.manager import VariableManager
-        ANSIBLE = 2
-    except ImportError:
-        ANSIBLE = 1
 
 
 _vars = dict()
@@ -60,20 +48,7 @@ def same_variable_defined_in_competing_groups(candidate, options):
     global _inv
 
     try:
-        if ANSIBLE > 1:
-            loader = ansible.parsing.dataloader.DataLoader()
-            try:
-                from ansible.inventory.manager import InventoryManager
-                inv = _inv or InventoryManager(loader=loader, sources=invfile)
-            except ImportError:
-                var_manager = VariableManager()
-                inv = _inv or ansible.inventory.Inventory(loader=loader,
-                                                          variable_manager=var_manager,
-                                                          host_list=invfile)
-            _inv = inv
-        else:
-            inv = _inv or ansible.inventory.Inventory(invfile)
-            _inv = inv
+        inv = _inv or parse_inventory(invfile)
     except AnsibleError as e:
         result.errors = [Error(None, "Inventory is broken: %s" % e.message)]
         return result
