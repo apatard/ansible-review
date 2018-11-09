@@ -1,5 +1,6 @@
 from ansiblelint import default_rulesdir, RulesCollection
 import codecs
+import subprocess
 from functools import partial
 import re
 import os
@@ -7,6 +8,8 @@ from ansiblereview import utils
 try:
     import ansible.parsing.dataloader
     from ansible.vars.manager import VariableManager
+    from ansible.module_utils._text import to_bytes
+    from ansible.parsing.vault import VaultSecret
     ANSIBLE = 2
 except ImportError:
     try:
@@ -279,3 +282,17 @@ def get_vault_password(options):
         else:
             pwd = options.vaultpass
     return pwd
+
+
+def get_decrypted_file(fname, vaultpass=None):
+    if ANSIBLE > 1:
+        loader = ansible.parsing.dataloader.DataLoader()
+        if vaultpass:
+            if hasattr(loader, 'set_vault_secrets'):
+                loader.set_vault_secrets([('default', VaultSecret(_bytes=to_bytes(vaultpass)))])
+            else:
+                # not tested
+                loader.set_vault_password(vaultpass)
+        return loader.get_real_file(fname)
+    else:
+        return fname
