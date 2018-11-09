@@ -2,16 +2,24 @@ from ansiblereview import Result, Error, parse_inventory
 from ansible.errors import AnsibleError
 import inspect
 import os
-
+import ansible.parsing.dataloader
 
 _vars = dict()
 _inv = None
 
 
-def get_group_vars(group, inventory):
+def get_group_vars(group, inventory, invfile):
     try:
-        from ansible.inventory.helpers import get_group_vars
-        return get_group_vars(inventory.groups.values())
+        from ansible.plugins.loader import vars_loader
+        from ansible.utils.vars import combine_vars
+        loader = ansible.parsing.dataloader.DataLoader()
+        # variables in inventory file
+        vars = group.get_vars()
+        # variables in group_vars related to invfile
+        for p in vars_loader.all():
+            gvars = p.get_vars(loader, invfile, group)
+            vars = combine_vars(vars, gvars)
+        return vars
     except ImportError:
         pass
     # http://stackoverflow.com/a/197053
@@ -22,9 +30,9 @@ def get_group_vars(group, inventory):
         return inventory.get_group_vars(group)
 
 
-def remove_inherited_and_overridden_vars(vars, group, inventory):
+def remove_inherited_and_overridden_vars(vars, group, inventory, invfile):
     if group not in _vars:
-        _vars[group] = get_group_vars(group, inventory)
+        _vars[group] = get_group_vars(group, inventory, invfile)
     gv = _vars[group]
     for (k, v) in vars.items():
         if k in gv:
@@ -34,11 +42,11 @@ def remove_inherited_and_overridden_vars(vars, group, inventory):
                 gv.pop(k)
 
 
-def remove_inherited_and_overridden_group_vars(group, inventory):
+def remove_inherited_and_overridden_group_vars(group, inventory, invfile):
     if group not in _vars:
-        _vars[group] = get_group_vars(group, inventory)
+        _vars[group] = get_group_vars(group, inventory, invfile)
     for ancestor in group.get_ancestors():
-        remove_inherited_and_overridden_vars(_vars[group], ancestor, inventory)
+        remove_inherited_and_overridden_vars(_vars[group], ancestor, inventory, invfile)
 
 
 def same_variable_defined_in_competing_groups(candidate, options):
@@ -66,7 +74,7 @@ def same_variable_defined_in_competing_groups(candidate, options):
         # group file exists in group_vars but no related group
         # in inventory directory
         return result
-    remove_inherited_and_overridden_group_vars(group, inv)
+    remove_inherited_and_overridden_group_vars(group, inv, invfile)
     group_vars = set(_vars[group].keys())
     child_hosts = group.hosts
     child_groups = group.child_groups
@@ -78,7 +86,7 @@ def same_variable_defined_in_competing_groups(candidate, options):
         siblings.update(child_group.parent_groups)
     for sibling in siblings:
         if sibling != group:
-            remove_inherited_and_overridden_group_vars(sibling, inv)
+            remove_inherited_and_overridden_group_vars(sibling, inv, invfile)
             sibling_vars = set(_vars[sibling].keys())
             common_vars = sibling_vars & group_vars
             common_hosts = [host.name for host in set(child_hosts) & set(sibling.hosts)]
