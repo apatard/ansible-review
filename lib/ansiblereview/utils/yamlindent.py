@@ -32,10 +32,11 @@ BAD:
 
 
 from __future__ import print_function
+import os
 import codecs
 import re
 import sys
-from ansiblereview import Result, Error, utils
+from ansiblereview import Result, Error, utils, get_decrypted_file, get_vault_password
 
 
 def indent_checker(filename):
@@ -62,7 +63,11 @@ def indent_checker(filename):
 
 
 def yamlreview(candidate, settings):
-    errors = indent_checker(candidate.path)
+    vaultpass = get_vault_password(settings)
+    fname = get_decrypted_file(candidate.path, vaultpass)
+    errors = indent_checker(fname)
+    if candidate.path not in fname:
+        os.unlink(fname)
     return Result(candidate.path, errors)
 
 
