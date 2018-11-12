@@ -252,18 +252,29 @@ def find_version(filename, version_regex="^# Standards: ([0-9]+\.[0-9]+)"):
 def parse_inventory(fname):
     inv = {}
 
+    # ansible throws warnings when parsing files in the inventory directory
+    # when a plugin cant parse a file. This may be tweaked by [inventory]
+    # configuration but not sure relying on that is a good idea.
+    # So, if the inventory is a directory, try to find "known" files.
+    invfile = fname
+    if os.path.isdir(invfile):
+        for hfile in ['hosts', 'hosts.yml', 'hosts.yaml', 'inventory']:
+            hfile = os.path.join(invfile, hfile)
+            if os.path.exists(hfile):
+                invfile = hfile
+                break
     if ANSIBLE > 1:
         loader = ansible.parsing.dataloader.DataLoader()
         try:
             from ansible.inventory.manager import InventoryManager
-            inv = InventoryManager(loader=loader, sources=fname)
+            inv = InventoryManager(loader=loader, sources=invfile)
         except ImportError:
             var_manager = VariableManager()
             inv = ansible.inventory.Inventory(loader=loader,
                                               variable_manager=var_manager,
-                                              host_list=fname)
+                                              host_list=invfile)
     else:
-        inv = ansible.inventory.Inventory(fname)
+        inv = ansible.inventory.Inventory(invfile)
     return inv
 
 
