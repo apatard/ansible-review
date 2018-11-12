@@ -42,13 +42,21 @@ from ansiblereview import Result, Error, utils, get_decrypted_file, get_vault_pa
 def indent_checker(filename):
     with codecs.open(filename, mode='rb', encoding='utf-8') as f:
         indent_regex = re.compile("^(?P<indent>\s*(?:- )?)(?P<rest>.*)$")
+        verb_regex = re.compile(".*: [|>]\d?$")
         lineno = 0
         prev_indent = ''
+        verbatim = False
         errors = []
         for line in f:
             lineno += 1
             match = indent_regex.match(line)
+            if verb_regex.match(line):
+                verbatim = True
             if len(match.group('rest')) == 0:
+                if verbatim:
+                    verbatim = False
+                continue
+            if verbatim:
                 continue
             curr_indent = match.group('indent')
             offset = len(curr_indent) - len(prev_indent)
