@@ -36,7 +36,7 @@ import os
 import codecs
 import re
 import sys
-from ansiblereview import Result, Error, utils, get_decrypted_file, get_vault_password
+from ansiblereview import Result, Error, utils, get_decrypted_file, get_vault_password, classify
 
 
 def indent_checker(filename):
@@ -75,8 +75,8 @@ if __name__ == '__main__':
     args = sys.argv[1:] or [sys.stdin]
     rc = 0
     for arg in args:
-        result = yamlreview(arg, utils.Settings())
-        for error in result.errors():
+        result = yamlreview(classify(arg), utils.Settings({}))
+        for error in result.errors:
             print("ERROR: %s:%s: %s" % (arg, error.lineno, error.message), file=sys.stderr)
             rc = 1
     sys.exit(rc)
