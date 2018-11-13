@@ -84,7 +84,7 @@ def main():
             (filename, lines) = filename.split(":")
         else:
             lines = None
-        candidate = classify(filename)
+        candidate = classify(filename, options)
         if candidate:
             if candidate.binary:
                 warn("Not reviewing binary file %s" % filename, options)

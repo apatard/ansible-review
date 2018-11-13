@@ -77,6 +77,7 @@ class Result(object):
 class Candidate(object):
     def __init__(self, filename):
         self.path = filename
+        self.realpath = filename
         try:
             self.version = find_version(filename)
             self.binary = False
@@ -139,6 +140,19 @@ class Unversioned(Candidate):
 
 
 class InventoryVars(Unversioned):
+    def __init__(self, filename, options):
+        super(InventoryVars, self).__init__(filename)
+        pwd = get_vault_password(options)
+        self.realpath = get_decrypted_file(filename, pwd)
+        self.encrypted = False
+        if filename not in self.realpath:
+            self.encrypted = True
+            self.version = find_version(self.realpath)
+
+    def __del__(self):
+        if self.encrypted:
+            os.unlink(self.realpath)
+
     pass
 
 
@@ -187,7 +201,7 @@ class Rolesfile(Unversioned):
     pass
 
 
-def classify(filename):
+def classify(filename, options):
     parentdir = os.path.basename(os.path.dirname(filename))
     if parentdir in ['tasks']:
         return Task(filename)
@@ -196,9 +210,9 @@ def classify(filename):
     if parentdir in ['vars', 'defaults']:
         return RoleVars(filename)
     if 'group_vars' in os.path.dirname(filename).split(os.sep):
-        return GroupVars(filename)
+        return GroupVars(filename, options)
     if 'host_vars' in os.path.dirname(filename).split(os.sep):
-        return HostVars(filename)
+        return HostVars(filename, options)
     if parentdir == 'meta':
         return Meta(filename)
     if parentdir in ['library', 'lookup_plugins', 'callback_plugins',

@@ -83,7 +83,8 @@ if __name__ == '__main__':
     args = sys.argv[1:] or [sys.stdin]
     rc = 0
     for arg in args:
-        result = yamlreview(classify(arg), utils.Settings({}))
+        options = utils.Settings({})
+        result = yamlreview(classify(arg, options), options)
         for error in result.errors:
             print("ERROR: %s:%s: %s" % (arg, error.lineno, error.message), file=sys.stderr)
             rc = 1
